@@ -17,6 +17,7 @@ public class ReservedHeadersGlobalFilter implements GlobalFilter, Ordered {
     static final Set<String> RESERVED_HEADERS = Set.of(
             "X-Internal-Key",
             "X-Actor-User-Id",
+            "X-Actor-Empresa-Id",
             "X-Onboarding-Id",
             "X-User-Id",
             "X-Empresa-Id",
