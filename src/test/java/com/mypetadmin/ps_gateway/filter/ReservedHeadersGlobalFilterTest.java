@@ -28,6 +28,7 @@ class ReservedHeadersGlobalFilterTest {
                 MockServerHttpRequest.post("/api/auth/login")
                         .header("X-Internal-Key", "nao-confiar")
                         .header("X-Actor-User-Id", "fake-user")
+                        .header("X-Actor-Empresa-Id", "fake-empresa")
                         .header("X-Onboarding-Id", "fake-onboarding")
                         .header("X-User-Id", "fake")
                         .header("X-Empresa-Id", "fake")
@@ -49,6 +50,7 @@ class ReservedHeadersGlobalFilterTest {
         GatewayFilterChain chain = exchange -> {
             exchange.getResponse().getHeaders().set("X-Internal-Key", "never-leak");
             exchange.getResponse().getHeaders().set("X-Onboarding-Id", "never-leak");
+            exchange.getResponse().getHeaders().set("X-Actor-Empresa-Id", "never-leak");
             return exchange.getResponse().setComplete();
         };
         MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/version").build());
@@ -57,5 +59,6 @@ class ReservedHeadersGlobalFilterTest {
 
         assertThat(exchange.getResponse().getHeaders().get("X-Internal-Key")).isNull();
         assertThat(exchange.getResponse().getHeaders().get("X-Onboarding-Id")).isNull();
+        assertThat(exchange.getResponse().getHeaders().get("X-Actor-Empresa-Id")).isNull();
     }
 }
