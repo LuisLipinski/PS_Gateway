@@ -124,8 +124,10 @@ class ContractRoutingIntegrationTest {
 
     @Test
     void jwtSemEmpresaIdNaoChegaAoPsContrato() throws Exception {
+        String jwt = token(false);
+
         client.get().uri("/api/contracts")
-                .headers(headers -> headers.setBearerAuth(token(false)))
+                .headers(headers -> headers.setBearerAuth(jwt))
                 .exchange()
                 .expectStatus().isUnauthorized();
 
