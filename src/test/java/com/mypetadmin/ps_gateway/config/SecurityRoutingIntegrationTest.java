@@ -81,8 +81,9 @@ class SecurityRoutingIntegrationTest {
         client.post().uri("/api/auth/password/change").exchange()
                 .expectStatus().isUnauthorized();
 
+        String jwt = token(VALID_SECRET, Instant.now().plusSeconds(300));
         client.post().uri("/api/auth/password/change")
-                .headers(headers -> headers.setBearerAuth(token(VALID_SECRET, Instant.now().plusSeconds(300))))
+                .headers(headers -> headers.setBearerAuth(jwt))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("change-ok");
@@ -90,21 +91,24 @@ class SecurityRoutingIntegrationTest {
 
     @Test
     void jwtExpiradoEAssinaturaInvalidaSaoRejeitados() throws Exception {
+        String expiredJwt = token(VALID_SECRET, Instant.now().minusSeconds(30));
         client.post().uri("/api/auth/password/change")
-                .headers(headers -> headers.setBearerAuth(token(VALID_SECRET, Instant.now().minusSeconds(30))))
+                .headers(headers -> headers.setBearerAuth(expiredJwt))
                 .exchange()
                 .expectStatus().isUnauthorized();
 
+        String invalidSignatureJwt = token(INVALID_SECRET, Instant.now().plusSeconds(300));
         client.post().uri("/api/auth/password/change")
-                .headers(headers -> headers.setBearerAuth(token(INVALID_SECRET, Instant.now().plusSeconds(300))))
+                .headers(headers -> headers.setBearerAuth(invalidSignatureJwt))
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
 
     @Test
     void rotaNaoAllowlistedPermaneceNegada() throws Exception {
+        String jwt = token(VALID_SECRET, Instant.now().plusSeconds(300));
         client.get().uri("/api/nao-permitida")
-                .headers(headers -> headers.setBearerAuth(token(VALID_SECRET, Instant.now().plusSeconds(300))))
+                .headers(headers -> headers.setBearerAuth(jwt))
                 .exchange()
                 .expectStatus().isForbidden();
     }
