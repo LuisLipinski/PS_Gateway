@@ -17,6 +17,8 @@ public class UserContextHeadersGatewayFilter implements GatewayFilter {
 
     private static final String INTERNAL_KEY_HEADER = "X-Internal-Key";
     private static final String ACTOR_USER_ID_HEADER = "X-Actor-User-Id";
+    private static final String ACTOR_EMPRESA_ID_HEADER = "X-Actor-Empresa-Id";
+    private static final String EMPRESA_ID_CLAIM = "empresaId";
 
     private final String internalKey;
 
@@ -38,7 +40,8 @@ public class UserContextHeadersGatewayFilter implements GatewayFilter {
             GatewayFilterChain chain,
             JwtAuthenticationToken authentication) {
         String actorUserId = authentication.getToken().getSubject();
-        if (actorUserId == null || actorUserId.isBlank()) {
+        String actorEmpresaId = authentication.getToken().getClaimAsString(EMPRESA_ID_CLAIM);
+        if (actorUserId == null || actorUserId.isBlank() || actorEmpresaId == null || actorEmpresaId.isBlank()) {
             return unauthorized(exchange);
         }
 
@@ -46,9 +49,11 @@ public class UserContextHeadersGatewayFilter implements GatewayFilter {
                 .headers(headers -> {
                     headers.remove(INTERNAL_KEY_HEADER);
                     headers.remove(ACTOR_USER_ID_HEADER);
+                    headers.remove(ACTOR_EMPRESA_ID_HEADER);
                     headers.remove(HttpHeaders.AUTHORIZATION);
                     headers.set(INTERNAL_KEY_HEADER, internalKey);
                     headers.set(ACTOR_USER_ID_HEADER, actorUserId);
+                    headers.set(ACTOR_EMPRESA_ID_HEADER, actorEmpresaId);
                 })
                 .build();
 

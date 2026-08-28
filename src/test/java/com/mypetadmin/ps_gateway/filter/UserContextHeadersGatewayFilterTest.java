@@ -23,6 +23,7 @@ import reactor.test.StepVerifier;
 class UserContextHeadersGatewayFilterTest {
 
     private static final String INTERNAL_KEY = "trusted-internal-key";
+    private static final String EMPRESA_ID = "22222222-2222-4222-8222-222222222222";
     private final UserContextHeadersGatewayFilter filter = new UserContextHeadersGatewayFilter(INTERNAL_KEY);
 
     @Test
@@ -32,10 +33,11 @@ class UserContextHeadersGatewayFilterTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer external-token")
                 .header("X-Internal-Key", "fake-key")
                 .header("X-Actor-User-Id", "99999999-9999-4999-8999-999999999999")
+                .header("X-Actor-Empresa-Id", "88888888-8888-4888-8888-888888888888")
                 .build();
         ServerWebExchange exchange = MockServerWebExchange.from(request)
                 .mutate()
-                .principal(Mono.just(authentication(actorUserId)))
+                .principal(Mono.just(authentication(actorUserId, EMPRESA_ID)))
                 .build();
 
         AtomicReference<ServerHttpRequest> forwarded = new AtomicReference<>();
@@ -49,6 +51,7 @@ class UserContextHeadersGatewayFilterTest {
         assertThat(forwarded.get()).isNotNull();
         assertThat(forwarded.get().getHeaders().getFirst("X-Internal-Key")).isEqualTo(INTERNAL_KEY);
         assertThat(forwarded.get().getHeaders().getFirst("X-Actor-User-Id")).isEqualTo(actorUserId);
+        assertThat(forwarded.get().getHeaders().getFirst("X-Actor-Empresa-Id")).isEqualTo(EMPRESA_ID);
         assertThat(forwarded.get().getHeaders().getFirst(HttpHeaders.AUTHORIZATION)).isNull();
     }
 
@@ -70,7 +73,7 @@ class UserContextHeadersGatewayFilterTest {
     void subjectVazioRetorna401() {
         ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/users").build())
                 .mutate()
-                .principal(Mono.just(authentication("")))
+                .principal(Mono.just(authentication("", EMPRESA_ID)))
                 .build();
 
         StepVerifier.create(filter.filter(exchange, current -> Mono.empty())).verifyComplete();
@@ -78,7 +81,29 @@ class UserContextHeadersGatewayFilterTest {
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
-    private JwtAuthenticationToken authentication(String subject) {
+    @Test
+    void empresaIdAusenteRetorna401() {
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/contracts").build())
+                .mutate()
+                .principal(Mono.just(authenticationSemEmpresa("11111111-1111-4111-8111-111111111111")))
+                .build();
+
+        StepVerifier.create(filter.filter(exchange, current -> Mono.empty())).verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    private JwtAuthenticationToken authentication(String subject, String empresaId) {
+        Jwt jwt = new Jwt(
+                "token-value",
+                Instant.now(),
+                Instant.now().plusSeconds(60),
+                Map.of("alg", "HS256"),
+                Map.of("sub", subject, "empresaId", empresaId));
+        return new JwtAuthenticationToken(jwt);
+    }
+
+    private JwtAuthenticationToken authenticationSemEmpresa(String subject) {
         Jwt jwt = new Jwt(
                 "token-value",
                 Instant.now(),

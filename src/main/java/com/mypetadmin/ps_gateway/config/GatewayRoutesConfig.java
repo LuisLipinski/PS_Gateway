@@ -18,7 +18,8 @@ public class GatewayRoutesConfig {
             UserContextHeadersGatewayFilter userContextHeadersGatewayFilter,
             @Value("${app.services.login-url}") String psLoginUrl,
             @Value("${app.services.orchestrator-url}") String psOrchestratorUrl,
-            @Value("${app.services.user-url}") String psUserUrl) {
+            @Value("${app.services.user-url}") String psUserUrl,
+            @Value("${app.services.contrato-url}") String psContratoUrl) {
         return builder.routes()
                 .route("auth-login", route -> route.path("/api/auth/login")
                         .filters(filter -> filter.setPath("/auth/login"))
@@ -56,6 +57,12 @@ public class GatewayRoutesConfig {
                                 .filter(userContextHeadersGatewayFilter)
                                 .rewritePath("/api/users/(?<segment>.*)", "/internal/usuarios/${segment}"))
                         .uri(psUserUrl))
+                .route("contracts-tenant", route -> route.path("/api/contracts")
+                        .and().method("GET")
+                        .filters(filter -> filter
+                                .filter(userContextHeadersGatewayFilter)
+                                .setPath("/contratos/tenant"))
+                        .uri(psContratoUrl))
                 .build();
     }
 }

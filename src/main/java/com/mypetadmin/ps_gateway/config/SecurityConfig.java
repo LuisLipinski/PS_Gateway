@@ -37,6 +37,7 @@ public class SecurityConfig {
                                 "/api/onboardings").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/auth/password/change").authenticated()
                         .pathMatchers("/api/users", "/api/users/**").authenticated()
+                        .pathMatchers(HttpMethod.GET, "/api/contracts").authenticated()
                         .anyExchange().denyAll())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .build();
