@@ -11,6 +11,7 @@ API Gateway do **My Pet Admin** e futura borda única entre o frontend e os micr
 - propagação segura de `X-Correlation-Id`;
 - CORS centralizado;
 - tradução segura da idempotência pública do onboarding;
+- derivação segura do contexto do ator para chamadas ao PS_User;
 - health/info/version e observabilidade de borda.
 
 O Gateway **não implementa regra de negócio** de Empresa, User, Contrato, Login ou Orchestrator.
@@ -32,11 +33,27 @@ O Gateway **não implementa regra de negócio** de Empresa, User, Contrato, Logi
 Públicas para PS_Login:
 - `POST /api/auth/login` -> `/auth/login`;
 - `POST /api/auth/activation` -> `/auth/activation`;
+- `POST /api/auth/refresh` -> `/auth/refresh`;
+- `POST /api/auth/logout` -> `/auth/logout`;
 - `POST /api/auth/password/forgot` -> `/auth/password/forgot`;
 - `POST /api/auth/password/reset` -> `/auth/password/reset`.
 
 Autenticada:
 - `POST /api/auth/password/change` -> `/auth/password/change`.
+
+## Gestão de usuários
+
+As rotas `/api/users` e `/api/users/**` exigem JWT válido e são encaminhadas ao contrato interno `/internal/usuarios` do PS_User.
+
+O Gateway:
+- descarta qualquer `X-Internal-Key` e `X-Actor-User-Id` enviado pelo cliente;
+- extrai o ator exclusivamente do `sub` do JWT validado;
+- injeta `X-Actor-User-Id` com esse `sub`;
+- injeta `X-Internal-Key` a partir da configuração server-side;
+- remove o header `Authorization` antes do PS_User interno;
+- remove headers internos do response.
+
+As regras de hierarquia MASTER/ADMIN/roles operacionais e o isolamento por `empresaId` continuam pertencendo ao PS_User, que recarrega o ator e aplica as invariantes do domínio.
 
 ## Onboarding público
 
@@ -78,7 +95,8 @@ Headers externos reservados são removidos antes do downstream, incluindo `X-Int
 ```env
 SPRING_PROFILES_ACTIVE=prod
 PS_LOGIN_URL=https://ps-login.onrender.com
-PS_ORCHESTRATOR_URL=https://<url-real-do-ps-orchestrator>.onrender.com
+PS_ORCHESTRATOR_URL=https://ps-orchestrator.onrender.com
+PS_USER_URL=https://ps-user.onrender.com
 INTERNAL_API_KEY=<mesma-chave-interna-dos-servicos>
 JWT_SECRET_KEY=<base64-256-bits-ou-mais>
 JWT_ISSUER=ps-login
@@ -89,7 +107,8 @@ O Gateway não possui banco próprio. Não configure `PORT` manualmente no Rende
 
 ## Próximas evoluções
 
-- rotas de negócio serão allowlisted individualmente após revisão de autorização/tenant;
+- PS_Empresa só será exposto após o hardening de tenant entrar na `master`;
+- PS_Contrato requer hardening equivalente antes de exposição pela borda;
 - rate limiting distribuído antes da exposição comercial;
 - migração HS256 -> assinatura assimétrica/JWKS;
 - frontend somente após contratos do Gateway estarem estabilizados.

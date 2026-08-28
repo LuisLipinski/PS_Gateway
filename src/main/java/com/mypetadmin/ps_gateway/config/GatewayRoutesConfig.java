@@ -1,6 +1,7 @@
 package com.mypetadmin.ps_gateway.config;
 
 import com.mypetadmin.ps_gateway.filter.OnboardingHeadersGatewayFilter;
+import com.mypetadmin.ps_gateway.filter.UserContextHeadersGatewayFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
@@ -14,14 +15,22 @@ public class GatewayRoutesConfig {
     RouteLocator gatewayRoutes(
             RouteLocatorBuilder builder,
             OnboardingHeadersGatewayFilter onboardingHeadersGatewayFilter,
+            UserContextHeadersGatewayFilter userContextHeadersGatewayFilter,
             @Value("${app.services.login-url}") String psLoginUrl,
-            @Value("${app.services.orchestrator-url}") String psOrchestratorUrl) {
+            @Value("${app.services.orchestrator-url}") String psOrchestratorUrl,
+            @Value("${app.services.user-url}") String psUserUrl) {
         return builder.routes()
                 .route("auth-login", route -> route.path("/api/auth/login")
                         .filters(filter -> filter.setPath("/auth/login"))
                         .uri(psLoginUrl))
                 .route("auth-activation", route -> route.path("/api/auth/activation")
                         .filters(filter -> filter.setPath("/auth/activation"))
+                        .uri(psLoginUrl))
+                .route("auth-refresh", route -> route.path("/api/auth/refresh")
+                        .filters(filter -> filter.setPath("/auth/refresh"))
+                        .uri(psLoginUrl))
+                .route("auth-logout", route -> route.path("/api/auth/logout")
+                        .filters(filter -> filter.setPath("/auth/logout"))
                         .uri(psLoginUrl))
                 .route("auth-password-forgot", route -> route.path("/api/auth/password/forgot")
                         .filters(filter -> filter.setPath("/auth/password/forgot"))
@@ -37,6 +46,16 @@ public class GatewayRoutesConfig {
                                 .filter(onboardingHeadersGatewayFilter)
                                 .setPath("/internal/onboardings"))
                         .uri(psOrchestratorUrl))
+                .route("users-root", route -> route.path("/api/users")
+                        .filters(filter -> filter
+                                .filter(userContextHeadersGatewayFilter)
+                                .setPath("/internal/usuarios"))
+                        .uri(psUserUrl))
+                .route("users-nested", route -> route.path("/api/users/**")
+                        .filters(filter -> filter
+                                .filter(userContextHeadersGatewayFilter)
+                                .rewritePath("/api/users/(?<segment>.*)", "/internal/usuarios/${segment}"))
+                        .uri(psUserUrl))
                 .build();
     }
 }
