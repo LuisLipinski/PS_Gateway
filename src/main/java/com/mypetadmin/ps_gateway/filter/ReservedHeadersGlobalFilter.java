@@ -27,7 +27,12 @@ public class ReservedHeadersGlobalFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest().mutate()
                 .headers(headers -> RESERVED_HEADERS.forEach(headers::remove))
                 .build();
-        return chain.filter(exchange.mutate().request(request).build());
+        ServerWebExchange sanitizedExchange = exchange.mutate().request(request).build();
+        sanitizedExchange.getResponse().beforeCommit(() -> {
+            RESERVED_HEADERS.forEach(sanitizedExchange.getResponse().getHeaders()::remove);
+            return Mono.empty();
+        });
+        return chain.filter(sanitizedExchange);
     }
 
     @Override

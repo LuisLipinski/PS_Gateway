@@ -43,4 +43,19 @@ class ReservedHeadersGlobalFilterTest {
         assertThat(headers.getFirst(HttpHeaders.AUTHORIZATION)).isEqualTo("Bearer token");
         assertThat(filter.getOrder()).isEqualTo(Integer.MIN_VALUE + 10);
     }
+
+    @Test
+    void removeHeadersReservadosDoResponseAntesDoCommit() {
+        GatewayFilterChain chain = exchange -> {
+            exchange.getResponse().getHeaders().set("X-Internal-Key", "never-leak");
+            exchange.getResponse().getHeaders().set("X-Onboarding-Id", "never-leak");
+            return exchange.getResponse().setComplete();
+        };
+        MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/version").build());
+
+        filter.filter(exchange, chain).block();
+
+        assertThat(exchange.getResponse().getHeaders().get("X-Internal-Key")).isNull();
+        assertThat(exchange.getResponse().getHeaders().get("X-Onboarding-Id")).isNull();
+    }
 }
