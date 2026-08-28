@@ -15,6 +15,7 @@ import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.web.server.ServerWebExchange;
 
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -32,7 +33,7 @@ class UserContextHeadersGatewayFilterTest {
                 .header("X-Internal-Key", "fake-key")
                 .header("X-Actor-User-Id", "99999999-9999-4999-8999-999999999999")
                 .build();
-        MockServerWebExchange exchange = MockServerWebExchange.from(request)
+        ServerWebExchange exchange = MockServerWebExchange.from(request)
                 .mutate()
                 .principal(Mono.just(authentication(actorUserId)))
                 .build();
@@ -67,7 +68,7 @@ class UserContextHeadersGatewayFilterTest {
 
     @Test
     void subjectVazioRetorna401() {
-        MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/users").build())
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/users").build())
                 .mutate()
                 .principal(Mono.just(authentication("")))
                 .build();
