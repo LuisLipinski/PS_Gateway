@@ -35,7 +35,7 @@ class JwtConfigTest {
         StepVerifier.create(decoder.decode(token))
                 .assertNext(jwt -> {
                     assertThat(jwt.getSubject()).isEqualTo("11111111-1111-4111-8111-111111111111");
-                    assertThat(jwt.getIssuer().toString()).isEqualTo("ps-login");
+                    assertThat(jwt.getClaimAsString("iss")).isEqualTo("ps-login");
                     assertThat(jwt.getClaimAsString("empresaId")).isEqualTo("22222222-2222-4222-8222-222222222222");
                 })
                 .verifyComplete();
