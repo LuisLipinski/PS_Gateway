@@ -35,6 +35,8 @@ class SecurityRoutingIntegrationTest {
             .port(0)
             .route(routes -> routes
                     .post("/auth/login", (request, response) -> response.status(200).sendString(Mono.just("login-ok")))
+                    .post("/auth/refresh", (request, response) -> response.status(200).sendString(Mono.just("refresh-ok")))
+                    .post("/auth/logout", (request, response) -> response.status(200).sendString(Mono.just("logout-ok")))
                     .post("/auth/password/change", (request, response) -> response.status(200).sendString(Mono.just("change-ok"))))
             .bindNow();
 
@@ -70,10 +72,16 @@ class SecurityRoutingIntegrationTest {
     }
 
     @Test
-    void loginPublicoERoteadoParaPsLogin() {
+    void loginRefreshELogoutPublicosSaoRoteadosParaPsLogin() {
         client.post().uri("/api/auth/login").exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("login-ok");
+        client.post().uri("/api/auth/refresh").exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("refresh-ok");
+        client.post().uri("/api/auth/logout").exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class).isEqualTo("logout-ok");
     }
 
     @Test
