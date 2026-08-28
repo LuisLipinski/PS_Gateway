@@ -89,8 +89,10 @@ class UserRoutingIntegrationTest {
 
     @Test
     void rotaRaizDerivaActorDoJwtESubstituiHeadersExternos() throws Exception {
+        String jwt = token();
+
         client.post().uri("/api/users")
-                .headers(headers -> headers.setBearerAuth(token()))
+                .headers(headers -> headers.setBearerAuth(jwt))
                 .header("X-Internal-Key", "client-fake-key")
                 .header("X-Actor-User-Id", UUID.randomUUID().toString())
                 .bodyValue("{\"nome\":\"Novo Usuario\"}")
@@ -109,9 +111,10 @@ class UserRoutingIntegrationTest {
     @Test
     void rotaAninhadaPreservaSegmentoInterno() throws Exception {
         String targetUserId = "22222222-2222-4222-8222-222222222222";
+        String jwt = token();
 
         client.get().uri("/api/users/{id}", targetUserId)
-                .headers(headers -> headers.setBearerAuth(token()))
+                .headers(headers -> headers.setBearerAuth(jwt))
                 .exchange()
                 .expectStatus().isOk();
 
