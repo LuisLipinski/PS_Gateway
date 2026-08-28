@@ -39,7 +39,7 @@ class ReservedHeadersGlobalFilterTest {
 
         HttpHeaders headers = captured.get().getRequest().getHeaders();
         assertThat(ReservedHeadersGlobalFilter.RESERVED_HEADERS)
-                .allSatisfy(header -> assertThat(headers.containsKey(header)).isFalse());
+                .allSatisfy(header -> assertThat(headers.get(header)).isNull());
         assertThat(headers.getFirst(HttpHeaders.AUTHORIZATION)).isEqualTo("Bearer token");
         assertThat(filter.getOrder()).isEqualTo(Integer.MIN_VALUE + 10);
     }
