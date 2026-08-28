@@ -1,6 +1,7 @@
 package com.mypetadmin.ps_gateway.config;
 
 import com.mypetadmin.ps_gateway.filter.OnboardingHeadersGatewayFilter;
+import com.mypetadmin.ps_gateway.filter.TenantContextHeadersGatewayFilter;
 import com.mypetadmin.ps_gateway.filter.UserContextHeadersGatewayFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.route.RouteLocator;
@@ -16,9 +17,11 @@ public class GatewayRoutesConfig {
             RouteLocatorBuilder builder,
             OnboardingHeadersGatewayFilter onboardingHeadersGatewayFilter,
             UserContextHeadersGatewayFilter userContextHeadersGatewayFilter,
+            TenantContextHeadersGatewayFilter tenantContextHeadersGatewayFilter,
             @Value("${app.services.login-url}") String psLoginUrl,
             @Value("${app.services.orchestrator-url}") String psOrchestratorUrl,
-            @Value("${app.services.user-url}") String psUserUrl) {
+            @Value("${app.services.user-url}") String psUserUrl,
+            @Value("${app.services.contrato-url}") String psContratoUrl) {
         return builder.routes()
                 .route("auth-login", route -> route.path("/api/auth/login")
                         .filters(filter -> filter.setPath("/auth/login"))
@@ -56,6 +59,11 @@ public class GatewayRoutesConfig {
                                 .filter(userContextHeadersGatewayFilter)
                                 .rewritePath("/api/users/(?<segment>.*)", "/internal/usuarios/${segment}"))
                         .uri(psUserUrl))
+                .route("contracts-tenant-read", route -> route.path("/api/contracts")
+                        .filters(filter -> filter
+                                .filter(tenantContextHeadersGatewayFilter)
+                                .setPath("/contratos/tenant"))
+                        .uri(psContratoUrl))
                 .build();
     }
 }
