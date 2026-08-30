@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -83,6 +84,17 @@ class SecurityRoutingIntegrationTest {
         client.post().uri("/api/auth/logout").exchange()
                 .expectStatus().isOk()
                 .expectBody(String.class).isEqualTo("logout-ok");
+    }
+
+    @Test
+    void rejeitaPayloadAcimaDoLimiteAntesDoDownstream() {
+        String oversizedPayload = "{\"email\":\"" + "a".repeat(70 * 1024) + "@example.com\",\"password\":\"senha\"}";
+
+        client.post().uri("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(oversizedPayload)
+                .exchange()
+                .expectStatus().isEqualTo(413);
     }
 
     @Test
