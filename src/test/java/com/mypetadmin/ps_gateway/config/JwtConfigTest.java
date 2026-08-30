@@ -30,7 +30,7 @@ class JwtConfigTest {
         String encoded = encodeSecret("0123456789abcdef0123456789abcdef");
         SecretKey key = config.jwtSecretKey(encoded);
         ReactiveJwtDecoder decoder = config.jwtDecoder(key, "ps-login");
-        String token = token("0123456789abcdef0123456789abcdef", Instant.now().plusSeconds(300));
+        String token = token("0123456789abcdef0123456789abcdef", "ps-login", Instant.now().plusSeconds(300));
 
         StepVerifier.create(decoder.decode(token))
                 .assertNext(jwt -> {
@@ -46,7 +46,16 @@ class JwtConfigTest {
         SecretKey key = config.jwtSecretKey(encodeSecret("0123456789abcdef0123456789abcdef"));
         ReactiveJwtDecoder decoder = config.jwtDecoder(key, "ps-login");
 
-        StepVerifier.create(decoder.decode(token("0123456789abcdef0123456789abcdef", Instant.now().minusSeconds(30))))
+        StepVerifier.create(decoder.decode(token("0123456789abcdef0123456789abcdef", "ps-login", Instant.now().minusSeconds(30))))
+                .verifyError();
+    }
+
+    @Test
+    void rejeitaIssuerIncorreto() throws Exception {
+        SecretKey key = config.jwtSecretKey(encodeSecret("0123456789abcdef0123456789abcdef"));
+        ReactiveJwtDecoder decoder = config.jwtDecoder(key, "ps-login");
+
+        StepVerifier.create(decoder.decode(token("0123456789abcdef0123456789abcdef", "issuer-nao-confiavel", Instant.now().plusSeconds(300))))
                 .verifyError();
     }
 
@@ -55,7 +64,7 @@ class JwtConfigTest {
         SecretKey key = config.jwtSecretKey(encodeSecret("0123456789abcdef0123456789abcdef"));
         ReactiveJwtDecoder decoder = config.jwtDecoder(key, "ps-login");
 
-        StepVerifier.create(decoder.decode(token("abcdef0123456789abcdef0123456789", Instant.now().plusSeconds(300))))
+        StepVerifier.create(decoder.decode(token("abcdef0123456789abcdef0123456789", "ps-login", Instant.now().plusSeconds(300))))
                 .verifyError();
     }
 
@@ -69,9 +78,9 @@ class JwtConfigTest {
                 .hasMessageContaining("Base64");
     }
 
-    private String token(String rawSecret, Instant expiresAt) throws Exception {
+    private String token(String rawSecret, String issuer, Instant expiresAt) throws Exception {
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
-                .issuer("ps-login")
+                .issuer(issuer)
                 .subject("11111111-1111-4111-8111-111111111111")
                 .issueTime(new Date())
                 .expirationTime(Date.from(expiresAt))
