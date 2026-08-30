@@ -1,7 +1,5 @@
 package com.mypetadmin.ps_gateway.config;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
@@ -12,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -31,6 +30,7 @@ class SecurityRoutingIntegrationTest {
 
     private static final String VALID_SECRET = "0123456789abcdef0123456789abcdef";
     private static final String INVALID_SECRET = "abcdef0123456789abcdef0123456789";
+    private static final String ALLOWED_ORIGIN = "https://app.mypetadmin.test";
     private static final DisposableServer DOWNSTREAM = HttpServer.create()
             .port(0)
             .route(routes -> routes
@@ -43,6 +43,7 @@ class SecurityRoutingIntegrationTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.services.login-url", () -> "http://localhost:" + DOWNSTREAM.port());
+        registry.add("app.cors.allowed-origins", () -> ALLOWED_ORIGIN);
     }
 
     @LocalServerPort
@@ -122,8 +123,32 @@ class SecurityRoutingIntegrationTest {
     }
 
     @Test
-    void corsNaoUsaWildcard() {
-        assertThat(System.getProperty("java.version")).startsWith("25");
+    void corsPermiteSomenteOriginConfigurada() {
+        client.options().uri("/api/auth/login")
+                .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Content-Type,X-Correlation-Id")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, ALLOWED_ORIGIN)
+                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true")
+                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_MAX_AGE, "3600");
+
+        client.options().uri("/api/auth/login")
+                .header(HttpHeaders.ORIGIN, "https://malicioso.example")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectHeader().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN);
+    }
+
+    @Test
+    void respostasDoGatewayIncluemSecurityHeadersBasicos() {
+        client.get().uri("/version")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals("X-Content-Type-Options", "nosniff")
+                .expectHeader().valueEquals("X-Frame-Options", "DENY");
     }
 
     private String token(String rawSecret, Instant expiresAt) throws Exception {
