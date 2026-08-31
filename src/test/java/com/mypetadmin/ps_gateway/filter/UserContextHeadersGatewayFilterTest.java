@@ -71,14 +71,12 @@ class UserContextHeadersGatewayFilterTest {
 
     @Test
     void subjectVazioRetorna401() {
-        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/users").build())
-                .mutate()
-                .principal(Mono.just(authentication("", EMPRESA_ID)))
-                .build();
+        assertUnauthorized(authentication("", EMPRESA_ID));
+    }
 
-        StepVerifier.create(filter.filter(exchange, current -> Mono.empty())).verifyComplete();
-
-        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    @Test
+    void subjectMalformadoRetorna401() {
+        assertUnauthorized(authentication("nao-e-uuid", EMPRESA_ID));
     }
 
     @Test
@@ -91,6 +89,27 @@ class UserContextHeadersGatewayFilterTest {
         StepVerifier.create(filter.filter(exchange, current -> Mono.empty())).verifyComplete();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void empresaIdMalformadoRetorna401() {
+        assertUnauthorized(authentication("11111111-1111-4111-8111-111111111111", "empresa-invalida"));
+    }
+
+    private void assertUnauthorized(JwtAuthenticationToken authentication) {
+        AtomicReference<Boolean> chainCalled = new AtomicReference<>(false);
+        ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/api/contracts").build())
+                .mutate()
+                .principal(Mono.just(authentication))
+                .build();
+
+        StepVerifier.create(filter.filter(exchange, current -> {
+            chainCalled.set(true);
+            return Mono.empty();
+        })).verifyComplete();
+
+        assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(chainCalled.get()).isFalse();
     }
 
     private JwtAuthenticationToken authentication(String subject, String empresaId) {
