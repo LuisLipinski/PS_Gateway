@@ -135,6 +135,49 @@ class SecurityRoutingIntegrationTest {
     }
 
     @Test
+    void metodosNaoAllowlistedNaoSaoEncaminhadosComoOperacaoValida() throws Exception {
+        client.get().uri("/api/auth/login")
+                .exchange()
+                .expectStatus().value(status -> org.assertj.core.api.Assertions.assertThat(status)
+                        .isIn(401, 403, 404, 405));
+
+        String jwt = token(VALID_SECRET, Instant.now().plusSeconds(300));
+        client.post().uri("/api/contracts")
+                .headers(headers -> headers.setBearerAuth(jwt))
+                .exchange()
+                .expectStatus().value(status -> org.assertj.core.api.Assertions.assertThat(status)
+                        .isIn(403, 404, 405));
+    }
+
+    @Test
+    void namespaceInternalNuncaEhExpostoPeloGatewayMesmoComJwtValido() throws Exception {
+        String jwt = token(VALID_SECRET, Instant.now().plusSeconds(300));
+
+        client.get().uri("/internal/usuarios")
+                .headers(headers -> headers.setBearerAuth(jwt))
+                .exchange()
+                .expectStatus().isForbidden();
+
+        client.post().uri("/internal/onboardings")
+                .headers(headers -> headers.setBearerAuth(jwt))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{}")
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void tentativaDePathTraversalCodificadoNaoAbreNamespaceInterno() throws Exception {
+        String jwt = token(VALID_SECRET, Instant.now().plusSeconds(300));
+
+        client.get().uri("/api/users/%2e%2e/%2e%2e/internal/usuarios")
+                .headers(headers -> headers.setBearerAuth(jwt))
+                .exchange()
+                .expectStatus().value(status -> org.assertj.core.api.Assertions.assertThat(status)
+                        .isIn(400, 403, 404));
+    }
+
+    @Test
     void corsPermiteSomenteOriginConfigurada() {
         client.options().uri("/api/auth/login")
                 .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
