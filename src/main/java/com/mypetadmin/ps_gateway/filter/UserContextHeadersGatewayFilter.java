@@ -1,5 +1,7 @@
 package com.mypetadmin.ps_gateway.filter;
 
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -41,7 +43,7 @@ public class UserContextHeadersGatewayFilter implements GatewayFilter {
             JwtAuthenticationToken authentication) {
         String actorUserId = authentication.getToken().getSubject();
         String actorEmpresaId = authentication.getToken().getClaimAsString(EMPRESA_ID_CLAIM);
-        if (actorUserId == null || actorUserId.isBlank() || actorEmpresaId == null || actorEmpresaId.isBlank()) {
+        if (!isValidUuid(actorUserId) || !isValidUuid(actorEmpresaId)) {
             return unauthorized(exchange);
         }
 
@@ -58,6 +60,18 @@ public class UserContextHeadersGatewayFilter implements GatewayFilter {
                 .build();
 
         return chain.filter(exchange.mutate().request(request).build());
+    }
+
+    private boolean isValidUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        try {
+            UUID.fromString(value);
+            return true;
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
