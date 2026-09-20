@@ -32,6 +32,7 @@ class SecurityRoutingIntegrationTest {
     private static final String VALID_SECRET = "0123456789abcdef0123456789abcdef";
     private static final String INVALID_SECRET = "abcdef0123456789abcdef0123456789";
     private static final String ALLOWED_ORIGIN = "https://app.mypetadmin.test";
+    private static final int UNAVAILABLE_PORT = 1;
     private static final DisposableServer DOWNSTREAM = HttpServer.create()
             .port(0)
             .route(routes -> routes
@@ -45,6 +46,7 @@ class SecurityRoutingIntegrationTest {
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.services.login-url", () -> "http://localhost:" + DOWNSTREAM.port());
         registry.add("app.cors.allowed-origins", () -> ALLOWED_ORIGIN);
+        registry.add("app.services.orchestrator-url", () -> "http://127.0.0.1:" + UNAVAILABLE_PORT);
     }
 
     @LocalServerPort
@@ -95,6 +97,22 @@ class SecurityRoutingIntegrationTest {
                 .bodyValue(oversizedPayload)
                 .exchange()
                 .expectStatus().isEqualTo(413);
+    }
+
+    @Test
+    void falhaDeDownstreamNaoVazaDetalhesDeInfraestrutura() {
+        client.post().uri("/api/onboardings")
+                .header("Idempotency-Key", "44444444-4444-4444-8444-444444444444")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{}")
+                .exchange()
+                .expectStatus().is5xxServerError()
+                .expectBody(String.class)
+                .value(body -> org.assertj.core.api.Assertions.assertThat(body)
+                        .doesNotContain("127.0.0.1")
+                        .doesNotContain("Connection refused")
+                        .doesNotContain("ConnectException")
+                        .doesNotContain("orchestrator"));
     }
 
     @Test
